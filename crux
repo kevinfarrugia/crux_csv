@@ -1,0 +1,24 @@
+#!/bin/bash
+
+origin=$1;
+output=$2;
+api_key=$3;
+
+echo -e "Running CrUX on $origin";
+echo -e "...\n";
+
+echo "Date,Origin,Form,LCP,CLS,Uncapped_CLS,FCP,FID" > $output
+
+curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$api_key \
+  --header 'Content-Type: application/json'  \
+  --data "{'origin': '$origin', 'formFactor': 'PHONE'}" |
+jq -r '[(now | strftime("%Y/%m/%d %H:%M:%S")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.experimental_uncapped_cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75] |
+  @csv' >> $output ;
+
+curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$api_key \
+  --header 'Content-Type: application/json'  \
+  --data "{'origin': '$origin', 'formFactor': 'DESKTOP'}" |
+jq -r '[(now | strftime("%Y/%m/%d %H:%M:%S")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.experimental_uncapped_cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75] |
+  @csv' >> $output ;
+
+echo -e "Output results to $output\n";
