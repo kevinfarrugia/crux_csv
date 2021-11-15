@@ -1,30 +1,117 @@
 #!/bin/bash
 
-origin=$1;
-output=$2;
-api_key=$3;
+usage() {
+  echo -e "Usage: $0 [options...] <origin> <key> \n\
+ -h, --help          Display help
+ -o, --output <path> Output path where to save results \n\
+ -a, --append        Append results to output file \n\
+ -V, --verbose       Make the operation more talkative" 1>&2
+  exit 1
+}
 
-echo -e "Running CrUX on $origin";
-echo -e "...\n";
+output=""
+verbose=0
+append=0
 
-echo "Date,Origin,Form,LCP,CLS,Uncapped_CLS,FCP,FID" > $output
+# $@ is all command line parameters passed to the script.
+# -o is for short options like -v
+# -l is for long options with double dash like --version
+# the comma separates different long options
+options=$(getopt -l "help,verbose,output:,append" -o "hVao:" -- "$@")
 
-curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$api_key \
-  --header 'Content-Type: application/json'  \
+# set --:
+# If no arguments follow this option, then the positional parameters are unset. Otherwise, the positional parameters
+# are set to the arguments, even if some of them begin with a ‘-’.
+eval set -- "$options"
+
+while true; do
+  case $1 in
+  -h | --help)
+    usage
+    ;;
+  -V | --verbose)
+    verbose=1
+    ;;
+  -a | --append)
+    append=1
+    ;;
+  -o | --output)
+    output=$2
+    ;;
+  --)
+    shift
+    break
+    ;;
+  esac
+  shift
+done
+
+origin=$1
+key=$2
+
+if [ -z "$origin" ] || [ -z "$key" ]; then
+  usage
+fi
+
+if [ "$verbose" == 1 ]; then
+  echo -e "Running CrUX on $origin"
+  echo -e "...\n"
+fi
+
+if [ "$append" == 0 ] && [ -f "$output" ]; then
+  read -p "Output file exists. Overwrite? (y/N) " -n 1 -r
+  echo
+  if [[ $REPLY =~ ^[Nn]$ ]] || [[ -z $REPLY ]]; then
+    exit
+  fi
+fi
+
+if [ ! -z "$output" ]; then
+  if [ $append == 0 ]; then
+    if [ "$verbose" == 1 ]; then
+      echo "Overwriting contents in $output"
+      echo
+    fi
+    echo "Date,Origin,Form,LCP,CLS,Uncapped_CLS,FCP,FID" >$output
+  fi
+fi
+
+if [ "$verbose" == 1 ]; then
+  echo -e "curl https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key\n\
+  --header 'Content-Type: application/json'\n\
+  --data {'origin': '$origin', 'formFactor': 'PHONE'}"
+  echo
+fi
+
+curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
+  --header 'Content-Type: application/json' \
   --data "{'origin': '$origin', 'formFactor': 'PHONE'}" |
-jq -r '[(now | strftime("%Y/%m/%d %H:%M:%S")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.experimental_uncapped_cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75] |
-  @csv' >> $output ;
+  jq -r '[(now | strftime("%Y/%m/%d %H:%M:%S")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.experimental_uncapped_cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75] |
+  @csv' |
+  if [ ! -z "$output" ]; then
+    tee 1>>$output 2>&1
+  fi
 
-curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$api_key \
-  --header 'Content-Type: application/json'  \
+if [ "$verbose" == 1 ]; then
+  echo -e "curl https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key\n\
+  --header 'Content-Type: application/json'\n\
+  --data {'origin': '$origin', 'formFactor': 'DESKTOP'}"
+  echo
+fi
+
+curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
+  --header 'Content-Type: application/json' \
   --data "{'origin': '$origin', 'formFactor': 'DESKTOP'}" |
-jq -r '[(now | strftime("%Y/%m/%d %H:%M:%S")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.experimental_uncapped_cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75] |
-  @csv' >> $output ;
+  jq -r '[(now | strftime("%Y/%m/%d %H:%M:%S")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.experimental_uncapped_cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75] |
+  @csv' |
+  if [ ! -z "$output" ]; then
+    tee 1>>$output 2>&1
+  fi
 
-curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$api_key \
-  --header 'Content-Type: application/json'  \
-  --data "{'origin': '$origin', 'formFactor': 'TABLET'}" |
-jq -r '[(now | strftime("%Y/%m/%d %H:%M:%S")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.experimental_uncapped_cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75] |
-  @csv' >> $output ;
+if [ ! -z "$output" ] && [ "$verbose" == 1 ]; then
+  echo -e "Saved results to $output\n"
+fi
 
-echo -e "Output results to $output\n";
+if [ "$verbose" == 1 ]; then
+  echo "Done."
+fi
