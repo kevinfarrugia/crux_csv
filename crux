@@ -49,7 +49,11 @@ done
 origin=$1
 key=$2
 
-if [ -z "$origin" ] || [ -z "$key" ]; then
+if [ -z "$key" ]; then
+  echo "CrUX API key is missing or invalid."
+fi
+
+if [ -z "$origin" ]; then
   usage
 fi
 
