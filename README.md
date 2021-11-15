@@ -32,7 +32,7 @@ You are able to configure a Cron job to execute the script daily and append the 
 
 **Example**
 ```
-0 1 * * * /path/to/crux https://web.dev ${CRUX_API_KEY} --output ./results.csv --append > /dev/null 2>&1
+0 1 * * * /path/to/crux https://web.dev ${CRUX_API_KEY} --output /home/kevinfarrugia/results.csv --append > /dev/null 2>&1
 ```
 
 ## CrUX API key
