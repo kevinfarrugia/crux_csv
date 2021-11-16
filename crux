@@ -90,10 +90,12 @@ fi
 curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
   --header 'Content-Type: application/json' \
   --data "{'origin': '$origin', 'formFactor': 'PHONE'}" |
-  jq -r '[(now | strftime("%Y/%m/%d %H:%M:%S")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.experimental_uncapped_cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75] |
+  jq -r '[(now | strftime("%Y/%m/%d")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.experimental_uncapped_cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75] |
   @csv' |
   if [ ! -z "$output" ]; then
     tee 1>>$output 2>&1
+  else
+    cat
   fi
 
 if [ "$verbose" == 1 ]; then
@@ -106,10 +108,12 @@ fi
 curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
   --header 'Content-Type: application/json' \
   --data "{'origin': '$origin', 'formFactor': 'DESKTOP'}" |
-  jq -r '[(now | strftime("%Y/%m/%d %H:%M:%S")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.experimental_uncapped_cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75] |
+  jq -r '[(now | strftime("%Y/%m/%d")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.experimental_uncapped_cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75] |
   @csv' |
   if [ ! -z "$output" ]; then
     tee 1>>$output 2>&1
+  else
+    cat
   fi
 
 if [ ! -z "$output" ] && [ "$verbose" == 1 ]; then
