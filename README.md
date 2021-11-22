@@ -4,6 +4,13 @@ Queries the CrUX API and saves the results in stdout or a CSV file.
 ## Motivation
 Currently historical data for an origin is only available through expensive BigQuery queries or using the [CrUX dashboard](https://web.dev/chrome-ux-report-data-studio-dashboard/). Saving the data to CSV allows you to store it cheaply, run queries against it and create visualisations.
 
+## Prerequisites
+
+```sh
+sudo apt update
+sudo apt install -y jq
+```
+
 ## Usage
 
 ```sh
