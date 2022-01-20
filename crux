@@ -76,7 +76,7 @@ if [ ! -z "$output" ]; then
       echo "Overwriting contents in $output"
       echo
     fi
-    echo "Date,Origin,Form,LCP,CLS,Uncapped_CLS,FCP,FID" >$output
+    echo "Date,Origin,Form,LCP,CLS,FCP,FID" >$output
   fi
 fi
 
@@ -90,7 +90,7 @@ fi
 curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
   --header 'Content-Type: application/json' \
   --data "{'origin': '$origin', 'formFactor': 'PHONE'}" |
-  jq -r '[(now | strftime("%Y/%m/%d")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.experimental_uncapped_cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75] |
+  jq -r '[(now | strftime("%Y/%m/%d")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75] |
   @csv' |
   if [ ! -z "$output" ]; then
     tee 1>>$output 2>&1
@@ -108,7 +108,7 @@ fi
 curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
   --header 'Content-Type: application/json' \
   --data "{'origin': '$origin', 'formFactor': 'DESKTOP'}" |
-  jq -r '[(now | strftime("%Y/%m/%d")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.experimental_uncapped_cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75] |
+  jq -r '[(now | strftime("%Y/%m/%d")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75] |
   @csv' |
   if [ ! -z "$output" ]; then
     tee 1>>$output 2>&1
