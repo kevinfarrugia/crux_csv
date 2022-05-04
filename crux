@@ -77,7 +77,7 @@ if [ ! -z "$output" ]; then
       echo "Overwriting contents in $output"
       echo
     fi
-    echo "Date,Origin,Form,LCP,CLS,FCP,FID" >$output
+    echo "Date,Origin,Form,LCP,CLS,FCP,FID,TTFB,INP" >$output
   fi
 fi
 
