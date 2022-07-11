@@ -2,7 +2,7 @@
 Queries the CrUX API and saves the results in stdout or a CSV file.
 
 ## Motivation
-Currently historical data for an origin is only available through expensive BigQuery queries or using the [CrUX dashboard](https://web.dev/chrome-ux-report-data-studio-dashboard/). Saving the data to CSV allows you to store it cheaply, run queries against it and create visualisations.
+Currently, historical data for an origin is only available through expensive BigQuery queries or using the [CrUX dashboard](https://web.dev/chrome-ux-report-data-studio-dashboard/). Saving the data to CSV allows you to store it cheaply, run queries against it and create visualizations.
 
 ## Prerequisites
 
@@ -13,16 +13,25 @@ sudo apt install -y jq
 
 ## Usage
 
+**Basic usage**
 ```sh
 ./crux https://web.dev ${CRUX_API_KEY}
 ```
 
-Save results to file.
+
+**Include histogram data (grouped as Good, NI and Poor)**
+```sh
+./crux https://web.dev ${CRUX_API_KEY} --full
+```
+
+
+**Save results to file**
 ```sh
 ./crux https://web.dev ${CRUX_API_KEY} --output ./results.csv --append
 ```
 
-Run for multiple origins
+
+**Run for multiple origins**
 ```sh
 ./crux https://developers.google.com ${CRUX_API_KEY} --output ./results.csv --append
 ./crux https://developer.mozilla.org ${CRUX_API_KEY} --output ./results.csv --append
@@ -35,7 +44,7 @@ See help for usage instructions.
 
 ## Cron
 
-You are able to configure a Cron job to execute the script daily and append the results to a CSV file.
+You can configure a Cron job to execute the script daily and append the results to a CSV file.
 
 **Example**
 ```
