@@ -6,9 +6,15 @@ Currently, historical data for an origin is only available through expensive Big
 
 ## Prerequisites
 
+**Ubuntu / Debian**
 ```sh
-sudo apt update
-sudo apt install -y jq
+$ sudo apt update
+$ sudo apt install -y jq
+```
+
+**OS X**
+```
+$ brew install jq
 ```
 
 ## Usage
