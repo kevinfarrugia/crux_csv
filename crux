@@ -10,50 +10,42 @@ usage() {
   exit 1
 }
 
-output=""
+output=
 verbose=0
 append=0
 full=0
 query=""
 
-# $@ is all command line parameters passed to the script.
-# -o is for short options like -v
-# -l is for long options with double dash like --version
-# the comma separates different long options
-options=$(getopt -l "help,verbose,output:,append,full" -o "hVafo:" -- "$@")
-
-# set --:
-# If no arguments follow this option, then the positional parameters are unset. Otherwise, the positional parameters
-# are set to the arguments, even if some of them begin with a ‘-’.
-eval set -- "$options"
-
-while true; do
+while [[ $# -gt 0 ]]; do
   case $1 in
   -h | --help)
     usage
+    shift
     ;;
   -V | --verbose)
     verbose=1
+    shift
     ;;
   -a | --append)
     append=1
+    shift
     ;;
   -f | --full)
     full=1
+    shift
     ;;
   -o | --output)
     output=$2
+    shift 2
     ;;
-  --)
-    shift
+  *)
+    origin=$1
+    key=$2
     break
+    shift
     ;;
   esac
-  shift
 done
-
-origin=$1
-key=$2
 
 if [ -z "$key" ]; then
   echo "CrUX API key is missing or invalid."

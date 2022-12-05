@@ -27,20 +27,20 @@ $ brew install jq
 
 **Include histogram data (grouped as Good, NI and Poor)**
 ```sh
-./crux https://web.dev ${CRUX_API_KEY} --full
+./crux --full https://web.dev ${CRUX_API_KEY}
 ```
 
 
 **Save results to file**
 ```sh
-./crux https://web.dev ${CRUX_API_KEY} --output ./results.csv --append
+./crux --output ./results.csv --append https://web.dev ${CRUX_API_KEY}
 ```
 
 
 **Run for multiple origins**
 ```sh
-./crux https://developers.google.com ${CRUX_API_KEY} --output ./results.csv --append
-./crux https://developer.mozilla.org ${CRUX_API_KEY} --output ./results.csv --append
+./crux --output ./results.csv --append https://developers.google.com ${CRUX_API_KEY}
+./crux --output ./results.csv --append https://developer.mozilla.org ${CRUX_API_KEY}
 ```
 
 See help for usage instructions.
@@ -54,7 +54,7 @@ You can configure a Cron job to execute the script daily and append the results 
 
 **Example**
 ```
-0 1 * * * /path/to/crux https://web.dev ${CRUX_API_KEY} --output /home/kevinfarrugia/results.csv --append > /dev/null 2>&1
+0 1 * * * /path/to/crux --output /home/kevinfarrugia/results.csv --append https://web.dev ${CRUX_API_KEY} > /dev/null 2>&1
 ```
 
 ## CrUX API key
