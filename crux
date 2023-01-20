@@ -1,7 +1,7 @@
 #!/bin/bash
 
 usage() {
-  echo -e "Usage: $0 [options...] <origin> <key> \n\
+  echo -e "Usage: $0 [options...] <url> <key> \n\
  -h, --help          Display help
  -o, --output <path> Output path where to save results \n\
  -a, --append        Append results to output file \n\
@@ -39,7 +39,7 @@ while [[ $# -gt 0 ]]; do
     shift 2
     ;;
   *)
-    origin=$1
+    url=$1
     key=$2
     break
     shift
@@ -52,12 +52,12 @@ if [ -z "$key" ]; then
   exit 1
 fi
 
-if [ -z "$origin" ]; then
+if [ -z "$url" ]; then
   usage
 fi
 
 if [ "$verbose" == 1 ]; then
-  echo -e "Running CrUX on $origin"
+  echo -e "Running CrUX on $url"
   echo -e "...\n"
 fi
 
@@ -76,9 +76,9 @@ if [ ! -z "$output" ]; then
       echo
     fi
     if [ "$full" == 1 ]; then
-      echo "Date,Origin,Form,LCP,LCP (good),LCP (NI),LCP (poor),CLS,CLS (good),CLS (NI),CLS (poor),FCP,FCP (good),FCP (NI),FCP (poor),FID,FID (good),FID (NI),FID (poor),TTFB,TTFB (good),TTFB (NI),TTFB (poor),INP,INP (good),INP (NI),INP (poor)" >$output
+      echo "Date,URL,Form,LCP,LCP (good),LCP (NI),LCP (poor),CLS,CLS (good),CLS (NI),CLS (poor),FCP,FCP (good),FCP (NI),FCP (poor),FID,FID (good),FID (NI),FID (poor),TTFB,TTFB (good),TTFB (NI),TTFB (poor),INP,INP (good),INP (NI),INP (poor)" >$output
     else
-      echo "Date,Origin,Form,LCP,CLS,FCP,FID,TTFB,INP" >$output
+      echo "Date,URL,Form,LCP,CLS,FCP,FID,TTFB,INP" >$output
     fi
   fi
 fi
@@ -86,19 +86,19 @@ fi
 if [ "$verbose" == 1 ]; then
   echo -e "curl https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key\n\
   --header 'Content-Type: application/json'\n\
-  --data \"{'origin': '$origin', 'formFactor': 'PHONE'}\""
+  --data \"{'url': '$url', 'formFactor': 'PHONE'}\""
   echo
 fi
 
 if [ "$full" == 1 ]; then
-  query='[(now | strftime("%Y/%m/%d")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.largest_contentful_paint.histogram[0].density, .record.metrics.largest_contentful_paint.histogram[1].density, .record.metrics.largest_contentful_paint.histogram[2].density, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.cumulative_layout_shift.histogram[0].density, .record.metrics.cumulative_layout_shift.histogram[1].density, .record.metrics.cumulative_layout_shift.histogram[2].density, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_contentful_paint.histogram[0].density, .record.metrics.first_contentful_paint.histogram[1].density, .record.metrics.first_contentful_paint.histogram[2].density, .record.metrics.first_input_delay.percentiles.p75, .record.metrics.first_input_delay.histogram[0].density, .record.metrics.first_input_delay.histogram[1].density, .record.metrics.first_input_delay.histogram[2].density, .record.metrics.experimental_time_to_first_byte.percentiles.p75, .record.metrics.experimental_time_to_first_byte.histogram[0].density, .record.metrics.experimental_time_to_first_byte.histogram[1].density, .record.metrics.experimental_time_to_first_byte.histogram[2].density, .record.metrics.experimental_interaction_to_next_paint.percentiles.p75, .record.metrics.experimental_interaction_to_next_paint.histogram[0].density, .record.metrics.experimental_interaction_to_next_paint.histogram[1].density, .record.metrics.experimental_interaction_to_next_paint.histogram[2].density]'
+  query='[(now | strftime("%Y/%m/%d")), .record.key.url, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.largest_contentful_paint.histogram[0].density, .record.metrics.largest_contentful_paint.histogram[1].density, .record.metrics.largest_contentful_paint.histogram[2].density, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.cumulative_layout_shift.histogram[0].density, .record.metrics.cumulative_layout_shift.histogram[1].density, .record.metrics.cumulative_layout_shift.histogram[2].density, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_contentful_paint.histogram[0].density, .record.metrics.first_contentful_paint.histogram[1].density, .record.metrics.first_contentful_paint.histogram[2].density, .record.metrics.first_input_delay.percentiles.p75, .record.metrics.first_input_delay.histogram[0].density, .record.metrics.first_input_delay.histogram[1].density, .record.metrics.first_input_delay.histogram[2].density, .record.metrics.experimental_time_to_first_byte.percentiles.p75, .record.metrics.experimental_time_to_first_byte.histogram[0].density, .record.metrics.experimental_time_to_first_byte.histogram[1].density, .record.metrics.experimental_time_to_first_byte.histogram[2].density, .record.metrics.experimental_interaction_to_next_paint.percentiles.p75, .record.metrics.experimental_interaction_to_next_paint.histogram[0].density, .record.metrics.experimental_interaction_to_next_paint.histogram[1].density, .record.metrics.experimental_interaction_to_next_paint.histogram[2].density]'
 else
-  query='[(now | strftime("%Y/%m/%d")), .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75, .record.metrics.experimental_time_to_first_byte.percentiles.p75, .record.metrics.experimental_interaction_to_next_paint.percentiles.p75]'
+  query='[(now | strftime("%Y/%m/%d")), .record.key.url, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_input_delay.percentiles.p75, .record.metrics.experimental_time_to_first_byte.percentiles.p75, .record.metrics.experimental_interaction_to_next_paint.percentiles.p75]'
 fi
 
 curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
   --header 'Content-Type: application/json' \
-  --data "{'origin': '$origin', 'formFactor': 'PHONE'}" |
+  --data "{'url': '$url', 'formFactor': 'PHONE'}" |
   jq -r "$query |
   @csv" |
   if [ ! -z "$output" ]; then
@@ -110,13 +110,13 @@ curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
 if [ "$verbose" == 1 ]; then
   echo -e "curl https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key\n\
   --header 'Content-Type: application/json'\n\
-  --data {'origin': '$origin', 'formFactor': 'DESKTOP'}"
+  --data {'url': '$url', 'formFactor': 'DESKTOP'}"
   echo
 fi
 
 curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
   --header 'Content-Type: application/json' \
-  --data "{'origin': '$origin', 'formFactor': 'DESKTOP'}" |
+  --data "{'url': '$url', 'formFactor': 'DESKTOP'}" |
   jq -r "$query |
   @csv" |
   if [ ! -z "$output" ]; then
