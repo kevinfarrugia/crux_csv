@@ -1,8 +1,8 @@
 # CrUX to CSV
-Queries the CrUX API and saves the results in stdout or a CSV file.
+Queries the CrUX API and saves the results in `stdout` or a CSV file.
 
 ## Motivation
-Currently, historical data for an origin is only available through expensive BigQuery queries or using the [CrUX dashboard](https://web.dev/chrome-ux-report-data-studio-dashboard/). Saving the data to CSV allows you to store it cheaply, run queries against it and create visualizations.
+Currently, historical data for a URL or origin is only available through BigQuery or using the [CrUX dashboard](https://web.dev/chrome-ux-report-data-studio-dashboard/). Saving the data to CSV allows you to store it cheaply, run queries against it and create visualizations.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ $ sudo apt update
 $ sudo apt install -y jq
 ```
 
-**OS X**
+**MacOS**
 ```
 $ brew install jq
 ```
@@ -21,8 +21,16 @@ $ brew install jq
 
 **Basic usage**
 ```sh
-./crux https://web.dev ${CRUX_API_KEY}
+./crux https://web.dev/lcp ${CRUX_API_KEY}
 ```
+
+
+**Origin-level data**
+```sh
+./crux --origin https://web.dev/lcp ${CRUX_API_KEY}
+```
+
+This will only return data for the origin and disregard the path, (i.e. https://web.dev)
 
 
 **Include histogram data (grouped as Good, NI and Poor)**
@@ -37,7 +45,7 @@ $ brew install jq
 ```
 
 
-**Run for multiple origins**
+**Run for multiple URLs**
 ```sh
 ./crux --output ./results.csv --append https://developers.google.com ${CRUX_API_KEY}
 ./crux --output ./results.csv --append https://developer.mozilla.org ${CRUX_API_KEY}

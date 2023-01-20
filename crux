@@ -5,6 +5,7 @@ usage() {
  -h, --help          Display help
  -o, --output <path> Output path where to save results \n\
  -a, --append        Append results to output file \n\
+ -O, --origin        Collect data for origin-level \n\
  -f, --full          Include histogram data (grouped as Good, NI and Poor) \n\
  -V, --verbose       Make the operation more talkative" 1>&2
   exit 1
@@ -15,6 +16,7 @@ verbose=0
 append=0
 full=0
 query=""
+origin=0
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -28,6 +30,10 @@ while [[ $# -gt 0 ]]; do
     ;;
   -a | --append)
     append=1
+    shift
+    ;;
+  -O | --origin)
+    origin=1
     shift
     ;;
   -f | --full)
@@ -83,10 +89,16 @@ if [ ! -z "$output" ]; then
   fi
 fi
 
+if [ "$origin" == 1 ]; then
+  data="{'origin': '$url', 'formFactor': 'PHONE'}"
+else
+  data="{'url': '$url', 'formFactor': 'PHONE'}"
+fi
+
 if [ "$verbose" == 1 ]; then
   echo -e "curl https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key\n\
   --header 'Content-Type: application/json'\n\
-  --data \"{'url': '$url', 'formFactor': 'PHONE'}\""
+  --data $data"
   echo
 fi
 
@@ -98,7 +110,7 @@ fi
 
 curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
   --header 'Content-Type: application/json' \
-  --data "{'url': '$url', 'formFactor': 'PHONE'}" |
+  --data "$data" |
   jq -r "$query |
   @csv" |
   if [ ! -z "$output" ]; then
@@ -107,16 +119,22 @@ curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
     cat
   fi
 
+if [ "$origin" == 1 ]; then
+  data="{'origin': '$url', 'formFactor': 'DESKTOP'}"
+else
+  data="{'url': '$url', 'formFactor': 'DESKTOP'}"
+fi
+
 if [ "$verbose" == 1 ]; then
   echo -e "curl https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key\n\
   --header 'Content-Type: application/json'\n\
-  --data {'url': '$url', 'formFactor': 'DESKTOP'}"
+  --data $data"
   echo
 fi
 
 curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
   --header 'Content-Type: application/json' \
-  --data "{'url': '$url', 'formFactor': 'DESKTOP'}" |
+  --data "$data" |
   jq -r "$query |
   @csv" |
   if [ ! -z "$output" ]; then
