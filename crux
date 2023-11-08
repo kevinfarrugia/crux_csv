@@ -87,6 +87,12 @@ if [ ! -z "$output" ]; then
       echo "Date,URL,Form,LCP,CLS,FCP,FID,TTFB,INP" >$output
     fi
   fi
+else
+  if [ "$full" == 1 ]; then
+    echo "Date,URL,Form,LCP,LCP (good),LCP (NI),LCP (poor),CLS,CLS (good),CLS (NI),CLS (poor),FCP,FCP (good),FCP (NI),FCP (poor),FID,FID (good),FID (NI),FID (poor),TTFB,TTFB (good),TTFB (NI),TTFB (poor),INP,INP (good),INP (NI),INP (poor)"
+  else
+    echo "Date,URL,Form,LCP,CLS,FCP,FID,TTFB,INP"
+  fi
 fi
 
 if [ "$origin" == 1 ]; then
