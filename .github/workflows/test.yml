@@ -16,8 +16,8 @@ jobs:
         env:
           CRUX_API_KEY: ${{ secrets.CRUX_API_KEY }}
         run: |
-          ./crux -O https://web.dev $CRUX_API_KEY >> $TEST_RESULTS
-          ./crux -O -f https://web.dev $CRUX_API_KEY >> $TEST_RESULTS_FULL
+          ./crux -O https://web.dev $CRUX_API_KEY >> "$TEST_RESULTS"
+          ./crux -O -f https://web.dev $CRUX_API_KEY >> "$TEST_RESULTS_FULL"
 
       - uses: actions/github-script@v6
         with:
