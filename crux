@@ -82,16 +82,16 @@ if [ ! -z "$output" ]; then
       echo
     fi
     if [ "$full" == 1 ]; then
-      echo "Date,URL,Form,LCP,LCP (good),LCP (NI),LCP (poor),CLS,CLS (good),CLS (NI),CLS (poor),FCP,FCP (good),FCP (NI),FCP (poor),INP,INP (good),INP (NI),INP (poor),TTFB,TTFB (good),TTFB (NI),TTFB (poor)" >$output
+      echo "Date,URL,Form,LCP,LCP (good),LCP (NI),LCP (poor),CLS,CLS (good),CLS (NI),CLS (poor),FCP,FCP (good),FCP (NI),FCP (poor),INP,INP (good),INP (NI),INP (poor),TTFB,TTFB (good),TTFB (NI),TTFB (poor),RTT" >$output
     else
-      echo "Date,URL,Form,LCP,CLS,FCP,INP,TTFB" >$output
+      echo "Date,URL,Form,LCP,CLS,FCP,INP,TTFB,RTT" >$output
     fi
   fi
 else
   if [ "$full" == 1 ]; then
-    echo "Date,URL,Form,LCP,LCP (good),LCP (NI),LCP (poor),CLS,CLS (good),CLS (NI),CLS (poor),FCP,FCP (good),FCP (NI),FCP (poor),INP,INP (good),INP (NI),INP (poor),TTFB,TTFB (good),TTFB (NI),TTFB (poor)"
+    echo "Date,URL,Form,LCP,LCP (good),LCP (NI),LCP (poor),CLS,CLS (good),CLS (NI),CLS (poor),FCP,FCP (good),FCP (NI),FCP (poor),INP,INP (good),INP (NI),INP (poor),TTFB,TTFB (good),TTFB (NI),TTFB (poor),RTT"
   else
-    echo "Date,URL,Form,LCP,CLS,FCP,INP,TTFB"
+    echo "Date,URL,Form,LCP,CLS,FCP,INP,TTFB,RTT"
   fi
 fi
 
@@ -109,9 +109,9 @@ if [ "$verbose" == 1 ]; then
 fi
 
 if [ "$full" == 1 ]; then
-  query='[(now | strftime("%Y/%m/%d")), .record.key.url + .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.largest_contentful_paint.histogram[0].density, .record.metrics.largest_contentful_paint.histogram[1].density, .record.metrics.largest_contentful_paint.histogram[2].density, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.cumulative_layout_shift.histogram[0].density, .record.metrics.cumulative_layout_shift.histogram[1].density, .record.metrics.cumulative_layout_shift.histogram[2].density, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_contentful_paint.histogram[0].density, .record.metrics.first_contentful_paint.histogram[1].density, .record.metrics.first_contentful_paint.histogram[2].density, .record.metrics.interaction_to_next_paint.percentiles.p75, .record.metrics.interaction_to_next_paint.histogram[0].density, .record.metrics.interaction_to_next_paint.histogram[1].density, .record.metrics.interaction_to_next_paint.histogram[2].density, .record.metrics.experimental_time_to_first_byte.percentiles.p75, .record.metrics.experimental_time_to_first_byte.histogram[0].density, .record.metrics.experimental_time_to_first_byte.histogram[1].density, .record.metrics.experimental_time_to_first_byte.histogram[2].density]'
+  query='[(now | strftime("%Y/%m/%d")), .record.key.url + .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.largest_contentful_paint.histogram[0].density, .record.metrics.largest_contentful_paint.histogram[1].density, .record.metrics.largest_contentful_paint.histogram[2].density, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.cumulative_layout_shift.histogram[0].density, .record.metrics.cumulative_layout_shift.histogram[1].density, .record.metrics.cumulative_layout_shift.histogram[2].density, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_contentful_paint.histogram[0].density, .record.metrics.first_contentful_paint.histogram[1].density, .record.metrics.first_contentful_paint.histogram[2].density, .record.metrics.interaction_to_next_paint.percentiles.p75, .record.metrics.interaction_to_next_paint.histogram[0].density, .record.metrics.interaction_to_next_paint.histogram[1].density, .record.metrics.interaction_to_next_paint.histogram[2].density, .record.metrics.experimental_time_to_first_byte.percentiles.p75, .record.metrics.experimental_time_to_first_byte.histogram[0].density, .record.metrics.experimental_time_to_first_byte.histogram[1].density, .record.metrics.experimental_time_to_first_byte.histogram[2].density,  .record.metrics.round_trip_time.percentiles.p75]'
 else
-  query='[(now | strftime("%Y/%m/%d")), .record.key.url + .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.interaction_to_next_paint.percentiles.p75, .record.metrics.experimental_time_to_first_byte.percentiles.p75]'
+  query='[(now | strftime("%Y/%m/%d")), .record.key.url + .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.interaction_to_next_paint.percentiles.p75, .record.metrics.experimental_time_to_first_byte.percentiles.p75, .record.metrics.round_trip_time.percentiles.p75]'
 fi
 
 curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
