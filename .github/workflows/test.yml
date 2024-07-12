@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  comment:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,5 +16,15 @@ jobs:
         env:
           CRUX_API_KEY: ${{ secrets.CRUX_API_KEY }}
         run: |
-          ./crux -O https://web.dev $CRUX_API_KEY
-          ./crux -O -f https://web.dev $CRUX_API_KEY
+          ./crux -O https://web.dev $CRUX_API_KEY >> $TEST_RESULTS
+          ./crux -O -f https://web.dev $CRUX_API_KEY >> $TEST_RESULTS_FULL
+
+      - uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: $TEST_RESULTS
+            })
