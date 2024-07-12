@@ -15,6 +15,6 @@ jobs:
       - name: Run CrUX
         env:
           CRUX_API_KEY: ${{ secrets.CRUX_API_KEY }}
-      - run: |
+        run: |
           ./crux -O https://web.dev $CRUX_API_KEY
           ./crux -O -f https://web.dev $CRUX_API_KEY
