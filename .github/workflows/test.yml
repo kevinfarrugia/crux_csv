@@ -1,0 +1,20 @@
+name: Build
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+
+      - name: Run CrUX
+        env:
+          CRUX_API_KEY: ${{ secrets.CRUX_API_KEY }}
+      - run: | 
+        ./crux -O https://web.dev $CRUX_API_KEY
+        ./crux -O -f https://web.dev $CRUX_API_KEY
