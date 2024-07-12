@@ -18,7 +18,7 @@ jobs:
         run: |
           {
             echo 'TEST_RESULTS<<EOF'
-            ./crux -O https://web.dev $CRUX_API_KEY
+            ./crux -O -F md https://web.dev $CRUX_API_KEY
             echo EOF
           } >> "$GITHUB_ENV"
 

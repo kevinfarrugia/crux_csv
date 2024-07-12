@@ -7,6 +7,7 @@ usage() {
  -a, --append        Append results to output file \n\
  -O, --origin        Collect data for origin-level \n\
  -f, --full          Include histogram data (grouped as Good, NI and Poor) \n\
+ -F, --format        Output format (csv, md) \n\
  -V, --verbose       Make the operation more talkative" 1>&2
   exit 1
 }
@@ -17,6 +18,7 @@ append=0
 full=0
 query=""
 origin=0
+format="csv"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -35,6 +37,10 @@ while [[ $# -gt 0 ]]; do
   -O | --origin)
     origin=1
     shift
+    ;;
+  -F | --format)
+    format=$2
+    shift 2
     ;;
   -f | --full)
     full=1
@@ -82,16 +88,36 @@ if [ ! -z "$output" ]; then
       echo
     fi
     if [ "$full" == 1 ]; then
-      echo "Date,URL,Form,LCP,LCP (good),LCP (NI),LCP (poor),CLS,CLS (good),CLS (NI),CLS (poor),FCP,FCP (good),FCP (NI),FCP (poor),INP,INP (good),INP (NI),INP (poor),TTFB,TTFB (good),TTFB (NI),TTFB (poor),RTT" >$output
+      if [ "$format" == "md" ]; then
+        echo "Date|URL|Form|LCP|LCP (good)|LCP (NI)|LCP (poor)|CLS|CLS (good)|CLS (NI)|CLS (poor)|FCP|FCP (good)|FCP (NI)|FCP (poor)|INP|INP (good)|INP (NI)|INP (poor)|TTFB|TTFB (good)|TTFB (NI)|TTFB (poor)|RTT" >$output
+        echo "-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-" >$output
+      else
+        echo "Date,URL,Form,LCP,LCP (good),LCP (NI),LCP (poor),CLS,CLS (good),CLS (NI),CLS (poor),FCP,FCP (good),FCP (NI),FCP (poor),INP,INP (good),INP (NI),INP (poor),TTFB,TTFB (good),TTFB (NI),TTFB (poor),RTT" >$output
+      fi
     else
-      echo "Date,URL,Form,LCP,CLS,FCP,INP,TTFB,RTT" >$output
+      if [ "$format" == "md" ]; then
+        echo "Date|URL|Form|LCP|CLS|FCP|INP|TTFB|RTT" >$output
+        echo "-|-|-|-|-|-|-|-|-" >$output
+      else
+        echo "Date,URL,Form,LCP,CLS,FCP,INP,TTFB,RTT" >$output
+      fi
     fi
   fi
 else
   if [ "$full" == 1 ]; then
-    echo "Date,URL,Form,LCP,LCP (good),LCP (NI),LCP (poor),CLS,CLS (good),CLS (NI),CLS (poor),FCP,FCP (good),FCP (NI),FCP (poor),INP,INP (good),INP (NI),INP (poor),TTFB,TTFB (good),TTFB (NI),TTFB (poor),RTT"
+    if [ "$format" == "md" ]; then
+      echo "Date|URL|Form|LCP|LCP (good)|LCP (NI)|LCP (poor)|CLS|CLS (good)|CLS (NI)|CLS (poor)|FCP|FCP (good)|FCP (NI)|FCP (poor)|INP|INP (good)|INP (NI)|INP (poor)|TTFB|TTFB (good)|TTFB (NI)|TTFB (poor)|RTT"
+      echo "-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-"
+    else
+      echo "Date,URL,Form,LCP,LCP (good),LCP (NI),LCP (poor),CLS,CLS (good),CLS (NI),CLS (poor),FCP,FCP (good),FCP (NI),FCP (poor),INP,INP (good),INP (NI),INP (poor),TTFB,TTFB (good),TTFB (NI),TTFB (poor),RTT"
+    fi
   else
-    echo "Date,URL,Form,LCP,CLS,FCP,INP,TTFB,RTT"
+    if [ "$format" == "md" ]; then
+      echo "Date|URL|Form|LCP|CLS|FCP|INP|TTFB|RTT"
+      echo "-|-|-|-|-|-|-|-|-"
+    else
+      echo "Date,URL,Form,LCP,CLS,FCP,INP,TTFB,RTT"
+    fi
   fi
 fi
 
@@ -120,9 +146,17 @@ curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
   jq -r "$query |
   @csv" |
   if [ ! -z "$output" ]; then
-    tee 1>>$output 2>&1
+    if [ "$format" == "md" ]; then
+      sed -r 's/,/|/g' | tee 1>>$output 2>&1
+    else
+      tee 1>>$output 2>&1
+    fi
   else
-    cat
+    if [ "$format" == "md" ]; then
+      sed -r 's/,/|/g' | cat
+    else
+      cat
+    fi
   fi
 
 if [ "$origin" == 1 ]; then
@@ -144,9 +178,17 @@ curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
   jq -r "$query |
   @csv" |
   if [ ! -z "$output" ]; then
-    tee 1>>$output 2>&1
+    if [ "$format" == "md" ]; then
+      sed -r 's/,/|/g' | tee 1>>$output 2>&1
+    else
+      tee 1>>$output 2>&1
+    fi
   else
-    cat
+    if [ "$format" == "md" ]; then
+      sed -r 's/,/|/g' | cat
+    else
+      cat
+    fi
   fi
 
 if [ ! -z "$output" ] && [ "$verbose" == 1 ]; then
