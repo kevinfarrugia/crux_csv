@@ -5,16 +5,29 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  comment:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Run CrUX
         env:
           CRUX_API_KEY: ${{ secrets.CRUX_API_KEY }}
         run: |
-          ./crux -O https://web.dev $CRUX_API_KEY
-          ./crux -O -f https://web.dev $CRUX_API_KEY
+          {
+            echo 'TEST_RESULTS<<EOF'
+            ./crux -O https://web.dev $CRUX_API_KEY
+            echo EOF
+          } >> "$GITHUB_ENV"
+
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `${{ env.TEST_RESULTS }}`
+            })
