@@ -16,7 +16,7 @@ jobs:
         env:
           CRUX_API_KEY: ${{ secrets.CRUX_API_KEY }}
         run: |
-          echo "FOO=bar" >> "$GITHUB_ENV"
+          echo "TEST_RESULTS=$(./crux -O https://web.dev $CRUX_API_KEY)" >> "$GITHUB_ENV"
 
       - uses: actions/github-script@v6
         with:
@@ -25,5 +25,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: ${{ env.FOO }}
+              body: ${{ env.TEST_RESULTS }}
             })
