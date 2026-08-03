@@ -6,6 +6,8 @@ usage() {
  -o, --output <path> Output path where to save results \n\
  -a, --append        Append results to output file \n\
  -O, --origin        Collect data for origin-level \n\
+ -c, --crawl         Discover URLs for the domain (via sitemap.xml, falling back \n\
+                     to crawling links) and query CrUX for each, up to $max_urls URLs \n\
  -f, --full          Include histogram data (grouped as Good, NI and Poor) \n\
  -F, --format        Output format (csv, md) \n\
  -V, --verbose       Make the operation more talkative" 1>&2
@@ -17,8 +19,11 @@ verbose=0
 append=0
 full=0
 origin=0
+crawl=0
 format="csv"
 positional=()
+crawl_max_depth=2
+max_urls=50
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -35,6 +40,10 @@ while [[ $# -gt 0 ]]; do
     ;;
   -O | --origin)
     origin=1
+    shift
+    ;;
+  -c | --crawl)
+    crawl=1
     shift
     ;;
   -F | --format)
@@ -87,6 +96,16 @@ fi
 
 if [ -z "$key" ]; then
   echo "CrUX API key is missing or invalid."
+  exit 1
+fi
+
+if [ "$crawl" == 1 ] && [ "$origin" == 1 ]; then
+  echo "--crawl cannot be combined with --origin" 1>&2
+  usage
+fi
+
+if [ "$crawl" == 1 ] && [[ ! "$url" =~ ^https?://[^/]+ ]]; then
+  echo "--crawl requires <url> to include a scheme and host, e.g. https://example.com" 1>&2
   exit 1
 fi
 
@@ -160,15 +179,162 @@ else
   query='[(now | strftime("%Y/%m/%d")), .record.key.url + .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.interaction_to_next_paint.percentiles.p75, .record.metrics.experimental_time_to_first_byte.percentiles.p75, .record.metrics.round_trip_time.percentiles.p75]'
 fi
 
+discovered_urls=()
+sitemap_seen=()
+
+# Only accept same-host http(s) URLs, deduped, up to $max_urls total.
+add_discovered_url() {
+  local candidate=$1
+
+  if [ "${#discovered_urls[@]}" -ge "$max_urls" ]; then
+    return
+  fi
+
+  if [[ ! "$candidate" =~ ^https?://([^/]+) ]]; then
+    return
+  fi
+  if [ "${BASH_REMATCH[1]}" != "$host" ]; then
+    return
+  fi
+
+  local existing
+  for existing in "${discovered_urls[@]}"; do
+    if [ "$existing" == "$candidate" ]; then
+      return
+    fi
+  done
+
+  discovered_urls+=("$candidate")
+}
+
+# Fetches a sitemap (or sitemap index, recursively) and adds any <loc> entries found.
+fetch_sitemap_urls() {
+  local sitemap_url=$1
+  local seen
+
+  for seen in "${sitemap_seen[@]}"; do
+    if [ "$seen" == "$sitemap_url" ]; then
+      return
+    fi
+  done
+  sitemap_seen+=("$sitemap_url")
+
+  if [ "${#discovered_urls[@]}" -ge "$max_urls" ]; then
+    return
+  fi
+
+  local xml
+  xml=$(curl -sL --max-time 10 "$sitemap_url" 2>/dev/null)
+  if [ -z "$xml" ]; then
+    return
+  fi
+
+  local locs
+  locs=$(grep -Eo '<loc>[^<]*</loc>' <<<"$xml" | sed -E 's/<\/?loc>//g')
+  if [ -z "$locs" ]; then
+    return
+  fi
+
+  if grep -q "<sitemapindex" <<<"$xml"; then
+    local sub
+    while IFS= read -r sub; do
+      if [ "${#discovered_urls[@]}" -ge "$max_urls" ]; then
+        break
+      fi
+      fetch_sitemap_urls "$sub"
+    done <<<"$locs"
+  else
+    local u
+    while IFS= read -r u; do
+      add_discovered_url "$u"
+    done <<<"$locs"
+  fi
+}
+
+# Resolves an href found on $base into an absolute URL, or prints nothing if
+# it should be ignored (fragment-only, mailto:, javascript:, etc).
+resolve_url() {
+  local base=$1 link=$2
+
+  case "$link" in
+  "#"* | mailto:* | javascript:* | tel:* | data:* | "")
+    return
+    ;;
+  esac
+
+  link=${link%%#*}
+  if [ -z "$link" ]; then
+    return
+  fi
+
+  if [[ "$link" =~ ^https?:// ]]; then
+    echo "$link"
+  elif [[ "$link" =~ ^// ]]; then
+    echo "https:$link"
+  elif [[ "$link" =~ ^/ ]]; then
+    echo "${origin_url}${link}"
+  else
+    echo "${base%/*}/${link}"
+  fi
+}
+
+# Breadth-first crawl of same-host links starting at the homepage, up to
+# $crawl_max_depth levels deep and $max_urls distinct URLs.
+crawl_links() {
+  add_discovered_url "$origin_url/"
+
+  local frontier=("$origin_url/")
+  local depth
+  for ((depth = 0; depth < crawl_max_depth; depth++)); do
+    local next_frontier=()
+    local page
+    for page in "${frontier[@]}"; do
+      if [ "${#discovered_urls[@]}" -ge "$max_urls" ]; then
+        return
+      fi
+
+      local html
+      html=$(curl -sL --max-time 10 "$page" 2>/dev/null)
+      if [ -z "$html" ]; then
+        continue
+      fi
+
+      local hrefs
+      hrefs=$(grep -Eo 'href="[^"]*"' <<<"$html" | sed -E 's/^href="//; s/"$//')
+
+      local href abs before after
+      while IFS= read -r href; do
+        if [ "${#discovered_urls[@]}" -ge "$max_urls" ]; then
+          break
+        fi
+        abs=$(resolve_url "$page" "$href")
+        if [ -z "$abs" ]; then
+          continue
+        fi
+        before=${#discovered_urls[@]}
+        add_discovered_url "$abs"
+        after=${#discovered_urls[@]}
+        if [ "$after" -gt "$before" ]; then
+          next_frontier+=("$abs")
+        fi
+      done <<<"$hrefs"
+    done
+    frontier=("${next_frontier[@]}")
+    if [ "${#frontier[@]}" -eq 0 ]; then
+      break
+    fi
+  done
+}
+
 fetch_form_factor() {
   local form_factor=$1
-  local data
-  local result
+  local target_url=$2
+  local data raw has_record result
 
   if [ "$origin" == 1 ]; then
-    data=$(jq -n --arg origin "$url" --arg formFactor "$form_factor" '{origin: $origin, formFactor: $formFactor}')
+    data=$(jq -n --arg origin "$target_url" --arg formFactor "$form_factor" '{origin: $origin, formFactor: $formFactor}')
   else
-    data=$(jq -n --arg url "$url" --arg formFactor "$form_factor" '{url: $url, formFactor: $formFactor}')
+    data=$(jq -n --arg url "$target_url" --arg formFactor "$form_factor" '{url: $url, formFactor: $formFactor}')
   fi
 
   if [ "$verbose" == 1 ]; then
@@ -178,10 +344,16 @@ fetch_form_factor() {
     echo
   fi
 
-  result=$(curl -s "https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key" \
+  raw=$(curl -s "https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key" \
     --header 'Content-Type: application/json' \
-    --data "$data" |
-    jq -r "$query | @csv")
+    --data "$data")
+
+  has_record=$(jq -r 'if .record then "1" else "0" end' <<<"$raw" 2>/dev/null)
+  if [ "$has_record" != "1" ]; then
+    return
+  fi
+
+  result=$(jq -r "$query | @csv" <<<"$raw")
 
   if [ "$format" == "md" ]; then
     result=$(echo "$result" | sed -r 's/,/|/g')
@@ -194,8 +366,32 @@ fetch_form_factor() {
   fi
 }
 
-fetch_form_factor "PHONE"
-fetch_form_factor "DESKTOP"
+if [ "$crawl" == 1 ]; then
+  origin_url=$(grep -Eo '^https?://[^/]+' <<<"$url")
+  host=$(sed -E 's#^https?://##' <<<"$origin_url")
+
+  fetch_sitemap_urls "${origin_url}/sitemap.xml"
+
+  if [ "${#discovered_urls[@]}" -eq 0 ]; then
+    crawl_links
+  fi
+
+  if [ "${#discovered_urls[@]}" -eq 0 ]; then
+    discovered_urls=("$url")
+  fi
+
+  if [ "$verbose" == 1 ]; then
+    echo "Discovered ${#discovered_urls[@]} URL(s) for $host"
+    echo
+  fi
+else
+  discovered_urls=("$url")
+fi
+
+for target_url in "${discovered_urls[@]}"; do
+  fetch_form_factor "PHONE" "$target_url"
+  fetch_form_factor "DESKTOP" "$target_url"
+done
 
 if [ -n "$output" ] && [ "$verbose" == 1 ]; then
   echo -e "Saved results to $output\n"
