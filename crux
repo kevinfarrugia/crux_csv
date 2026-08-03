@@ -16,15 +16,14 @@ output=
 verbose=0
 append=0
 full=0
-query=""
 origin=0
 format="csv"
+positional=()
 
 while [[ $# -gt 0 ]]; do
   case $1 in
   -h | --help)
     usage
-    shift
     ;;
   -V | --verbose)
     verbose=1
@@ -39,6 +38,10 @@ while [[ $# -gt 0 ]]; do
     shift
     ;;
   -F | --format)
+    if [ -z "$2" ]; then
+      echo "Missing value for $1" 1>&2
+      usage
+    fi
     format=$2
     shift 2
     ;;
@@ -47,25 +50,44 @@ while [[ $# -gt 0 ]]; do
     shift
     ;;
   -o | --output)
+    if [ -z "$2" ]; then
+      echo "Missing value for $1" 1>&2
+      usage
+    fi
     output=$2
     shift 2
     ;;
-  *)
-    url=$1
-    key=$2
+  --)
+    shift
+    positional+=("$@")
     break
+    ;;
+  -*)
+    echo "Unknown option: $1" 1>&2
+    usage
+    ;;
+  *)
+    positional+=("$1")
     shift
     ;;
   esac
 done
 
-if [ -z "$key" ]; then
-  echo "CrUX API key is missing or invalid."
-  exit 1
+url=${positional[0]}
+key=${positional[1]}
+
+if [ "$format" != "csv" ] && [ "$format" != "md" ]; then
+  echo "Invalid format: $format (expected csv or md)" 1>&2
+  usage
 fi
 
 if [ -z "$url" ]; then
   usage
+fi
+
+if [ -z "$key" ]; then
+  echo "CrUX API key is missing or invalid."
+  exit 1
 fi
 
 if [ "$verbose" == 1 ]; then
@@ -81,29 +103,40 @@ if [ "$append" == 0 ] && [ -f "$output" ]; then
   fi
 fi
 
-if [ ! -z "$output" ]; then
-  if [ $append == 0 ]; then
-    if [ "$verbose" == 1 ]; then
+write_header=0
+if [ -n "$output" ] && { [ "$append" == 0 ] || [ ! -f "$output" ]; }; then
+  write_header=1
+fi
+
+if [ "$write_header" == 1 ]; then
+  if [ "$verbose" == 1 ]; then
+    if [ "$append" == 0 ]; then
       echo "Overwriting contents in $output"
-      echo
-    fi
-    if [ "$full" == 1 ]; then
-      if [ "$format" == "md" ]; then
-        echo "Date|URL|Form|LCP|LCP (good)|LCP (NI)|LCP (poor)|CLS|CLS (good)|CLS (NI)|CLS (poor)|FCP|FCP (good)|FCP (NI)|FCP (poor)|INP|INP (good)|INP (NI)|INP (poor)|TTFB|TTFB (good)|TTFB (NI)|TTFB (poor)|RTT" >$output
-        echo "-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-" >$output
-      else
-        echo "Date,URL,Form,LCP,LCP (good),LCP (NI),LCP (poor),CLS,CLS (good),CLS (NI),CLS (poor),FCP,FCP (good),FCP (NI),FCP (poor),INP,INP (good),INP (NI),INP (poor),TTFB,TTFB (good),TTFB (NI),TTFB (poor),RTT" >$output
-      fi
     else
-      if [ "$format" == "md" ]; then
-        echo "Date|URL|Form|LCP|CLS|FCP|INP|TTFB|RTT" >$output
-        echo "-|-|-|-|-|-|-|-|-" >$output
-      else
-        echo "Date,URL,Form,LCP,CLS,FCP,INP,TTFB,RTT" >$output
-      fi
+      echo "Creating new output file $output"
+    fi
+    echo
+  fi
+  if [ "$full" == 1 ]; then
+    if [ "$format" == "md" ]; then
+      {
+        echo "Date|URL|Form|LCP|LCP (good)|LCP (NI)|LCP (poor)|CLS|CLS (good)|CLS (NI)|CLS (poor)|FCP|FCP (good)|FCP (NI)|FCP (poor)|INP|INP (good)|INP (NI)|INP (poor)|TTFB|TTFB (good)|TTFB (NI)|TTFB (poor)|RTT"
+        echo "-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-"
+      } >"$output"
+    else
+      echo "Date,URL,Form,LCP,LCP (good),LCP (NI),LCP (poor),CLS,CLS (good),CLS (NI),CLS (poor),FCP,FCP (good),FCP (NI),FCP (poor),INP,INP (good),INP (NI),INP (poor),TTFB,TTFB (good),TTFB (NI),TTFB (poor),RTT" >"$output"
+    fi
+  else
+    if [ "$format" == "md" ]; then
+      {
+        echo "Date|URL|Form|LCP|CLS|FCP|INP|TTFB|RTT"
+        echo "-|-|-|-|-|-|-|-|-"
+      } >"$output"
+    else
+      echo "Date,URL,Form,LCP,CLS,FCP,INP,TTFB,RTT" >"$output"
     fi
   fi
-else
+elif [ -z "$output" ]; then
   if [ "$full" == 1 ]; then
     if [ "$format" == "md" ]; then
       echo "Date|URL|Form|LCP|LCP (good)|LCP (NI)|LCP (poor)|CLS|CLS (good)|CLS (NI)|CLS (poor)|FCP|FCP (good)|FCP (NI)|FCP (poor)|INP|INP (good)|INP (NI)|INP (poor)|TTFB|TTFB (good)|TTFB (NI)|TTFB (poor)|RTT"
@@ -121,77 +154,50 @@ else
   fi
 fi
 
-if [ "$origin" == 1 ]; then
-  data="{'origin': '$url', 'formFactor': 'PHONE'}"
-else
-  data="{'url': '$url', 'formFactor': 'PHONE'}"
-fi
-
-if [ "$verbose" == 1 ]; then
-  echo -e "curl https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key\n\
-  --header 'Content-Type: application/json'\n\
-  --data $data"
-  echo
-fi
-
 if [ "$full" == 1 ]; then
   query='[(now | strftime("%Y/%m/%d")), .record.key.url + .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.largest_contentful_paint.histogram[0].density, .record.metrics.largest_contentful_paint.histogram[1].density, .record.metrics.largest_contentful_paint.histogram[2].density, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.cumulative_layout_shift.histogram[0].density, .record.metrics.cumulative_layout_shift.histogram[1].density, .record.metrics.cumulative_layout_shift.histogram[2].density, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.first_contentful_paint.histogram[0].density, .record.metrics.first_contentful_paint.histogram[1].density, .record.metrics.first_contentful_paint.histogram[2].density, .record.metrics.interaction_to_next_paint.percentiles.p75, .record.metrics.interaction_to_next_paint.histogram[0].density, .record.metrics.interaction_to_next_paint.histogram[1].density, .record.metrics.interaction_to_next_paint.histogram[2].density, .record.metrics.experimental_time_to_first_byte.percentiles.p75, .record.metrics.experimental_time_to_first_byte.histogram[0].density, .record.metrics.experimental_time_to_first_byte.histogram[1].density, .record.metrics.experimental_time_to_first_byte.histogram[2].density,  .record.metrics.round_trip_time.percentiles.p75]'
 else
   query='[(now | strftime("%Y/%m/%d")), .record.key.url + .record.key.origin, .record.key.formFactor, .record.metrics.largest_contentful_paint.percentiles.p75, .record.metrics.cumulative_layout_shift.percentiles.p75, .record.metrics.first_contentful_paint.percentiles.p75, .record.metrics.interaction_to_next_paint.percentiles.p75, .record.metrics.experimental_time_to_first_byte.percentiles.p75, .record.metrics.round_trip_time.percentiles.p75]'
 fi
 
-curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
-  --header 'Content-Type: application/json' \
-  --data "$data" |
-  jq -r "$query |
-  @csv" |
-  if [ ! -z "$output" ]; then
-    if [ "$format" == "md" ]; then
-      sed -r 's/,/|/g' | tee 1>>$output 2>&1
-    else
-      tee 1>>$output 2>&1
-    fi
+fetch_form_factor() {
+  local form_factor=$1
+  local data
+  local result
+
+  if [ "$origin" == 1 ]; then
+    data=$(jq -n --arg origin "$url" --arg formFactor "$form_factor" '{origin: $origin, formFactor: $formFactor}')
   else
-    if [ "$format" == "md" ]; then
-      sed -r 's/,/|/g' | cat
-    else
-      cat
-    fi
+    data=$(jq -n --arg url "$url" --arg formFactor "$form_factor" '{url: $url, formFactor: $formFactor}')
   fi
 
-if [ "$origin" == 1 ]; then
-  data="{'origin': '$url', 'formFactor': 'DESKTOP'}"
-else
-  data="{'url': '$url', 'formFactor': 'DESKTOP'}"
-fi
-
-if [ "$verbose" == 1 ]; then
-  echo -e "curl https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key\n\
+  if [ "$verbose" == 1 ]; then
+    echo -e "curl \"https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key\"\n\
   --header 'Content-Type: application/json'\n\
-  --data $data"
-  echo
-fi
-
-curl -s https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key \
-  --header 'Content-Type: application/json' \
-  --data "$data" |
-  jq -r "$query |
-  @csv" |
-  if [ ! -z "$output" ]; then
-    if [ "$format" == "md" ]; then
-      sed -r 's/,/|/g' | tee 1>>$output 2>&1
-    else
-      tee 1>>$output 2>&1
-    fi
-  else
-    if [ "$format" == "md" ]; then
-      sed -r 's/,/|/g' | cat
-    else
-      cat
-    fi
+  --data '$data'"
+    echo
   fi
 
-if [ ! -z "$output" ] && [ "$verbose" == 1 ]; then
+  result=$(curl -s "https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key" \
+    --header 'Content-Type: application/json' \
+    --data "$data" |
+    jq -r "$query | @csv")
+
+  if [ "$format" == "md" ]; then
+    result=$(echo "$result" | sed -r 's/,/|/g')
+  fi
+
+  if [ -n "$output" ]; then
+    echo "$result" >>"$output"
+  else
+    echo "$result"
+  fi
+}
+
+fetch_form_factor "PHONE"
+fetch_form_factor "DESKTOP"
+
+if [ -n "$output" ] && [ "$verbose" == 1 ]; then
   echo -e "Saved results to $output\n"
 fi
 
