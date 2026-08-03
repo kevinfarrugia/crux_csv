@@ -23,7 +23,9 @@ crawl=0
 format="csv"
 positional=()
 crawl_max_depth=2
-max_urls=50
+max_urls=1000
+max_queries_per_minute=150
+query_timestamps=()
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -326,6 +328,33 @@ crawl_links() {
   done
 }
 
+# Blocks until issuing another CrUX API request would keep the rolling
+# per-minute rate at or below $max_queries_per_minute.
+throttle_query() {
+  local now
+  now=$(date +%s)
+
+  while [ "${#query_timestamps[@]}" -gt 0 ] && [ $((now - query_timestamps[0])) -ge 60 ]; do
+    query_timestamps=("${query_timestamps[@]:1}")
+  done
+
+  if [ "${#query_timestamps[@]}" -ge "$max_queries_per_minute" ]; then
+    local sleep_time=$((60 - (now - query_timestamps[0])))
+    if [ "$sleep_time" -gt 0 ]; then
+      if [ "$verbose" == 1 ]; then
+        echo "Rate limit of $max_queries_per_minute queries/minute reached. Sleeping for ${sleep_time}s..."
+      fi
+      sleep "$sleep_time"
+    fi
+    now=$(date +%s)
+    while [ "${#query_timestamps[@]}" -gt 0 ] && [ $((now - query_timestamps[0])) -ge 60 ]; do
+      query_timestamps=("${query_timestamps[@]:1}")
+    done
+  fi
+
+  query_timestamps+=("$now")
+}
+
 fetch_form_factor() {
   local form_factor=$1
   local target_url=$2
@@ -343,6 +372,8 @@ fetch_form_factor() {
   --data '$data'"
     echo
   fi
+
+  throttle_query
 
   raw=$(curl -s "https://chromeuxreport.googleapis.com/v1/records:queryRecord?key=$key" \
     --header 'Content-Type: application/json' \
