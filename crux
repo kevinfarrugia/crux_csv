@@ -2,12 +2,14 @@
 
 usage() {
   echo -e "Usage: $0 [options...] <url> <key> \n\
+       $0 [options...] -i <path> <key> \n\
  -h, --help          Display help
  -o, --output <path> Output path where to save results \n\
  -a, --append        Append results to output file \n\
  -O, --origin        Collect data for origin-level \n\
  -c, --crawl         Discover URLs for the domain (via sitemap.xml, falling back \n\
                      to crawling links) and query CrUX for each, up to $max_urls URLs \n\
+ -i, --input <path>  Read newline-separated URLs from a file and query CrUX for each \n\
  -f, --full          Include histogram data (grouped as Good, NI and Poor) \n\
  -F, --format        Output format (csv, md) \n\
  -V, --verbose       Make the operation more talkative" 1>&2
@@ -15,6 +17,7 @@ usage() {
 }
 
 output=
+input=
 verbose=0
 append=0
 full=0
@@ -47,6 +50,14 @@ while [[ $# -gt 0 ]]; do
   -c | --crawl)
     crawl=1
     shift
+    ;;
+  -i | --input)
+    if [ -z "$2" ]; then
+      echo "Missing value for $1" 1>&2
+      usage
+    fi
+    input=$2
+    shift 2
     ;;
   -F | --format)
     if [ -z "$2" ]; then
@@ -84,15 +95,19 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-url=${positional[0]}
-key=${positional[1]}
+if [ -n "$input" ]; then
+  key=${positional[0]}
+else
+  url=${positional[0]}
+  key=${positional[1]}
+fi
 
 if [ "$format" != "csv" ] && [ "$format" != "md" ]; then
   echo "Invalid format: $format (expected csv or md)" 1>&2
   usage
 fi
 
-if [ -z "$url" ]; then
+if [ -z "$input" ] && [ -z "$url" ]; then
   usage
 fi
 
@@ -106,13 +121,27 @@ if [ "$crawl" == 1 ] && [ "$origin" == 1 ]; then
   usage
 fi
 
+if [ -n "$input" ] && [ "$crawl" == 1 ]; then
+  echo "--input cannot be combined with --crawl" 1>&2
+  usage
+fi
+
 if [ "$crawl" == 1 ] && [[ ! "$url" =~ ^https?://[^/]+ ]]; then
   echo "--crawl requires <url> to include a scheme and host, e.g. https://example.com" 1>&2
   exit 1
 fi
 
+if [ -n "$input" ] && [ ! -r "$input" ]; then
+  echo "Input file not found or not readable: $input" 1>&2
+  exit 1
+fi
+
 if [ "$verbose" == 1 ]; then
-  echo -e "Running CrUX on $url"
+  if [ -n "$input" ]; then
+    echo -e "Running CrUX on URLs from $input"
+  else
+    echo -e "Running CrUX on $url"
+  fi
   echo -e "...\n"
 fi
 
@@ -413,6 +442,18 @@ if [ "$crawl" == 1 ]; then
 
   if [ "$verbose" == 1 ]; then
     echo "Discovered ${#discovered_urls[@]} URL(s) for $host"
+    echo
+  fi
+elif [ -n "$input" ]; then
+  while IFS= read -r line || [ -n "$line" ]; do
+    if [ -z "$line" ]; then
+      continue
+    fi
+    discovered_urls+=("$line")
+  done <"$input"
+
+  if [ "$verbose" == 1 ]; then
+    echo "Read ${#discovered_urls[@]} URL(s) from $input"
     echo
   fi
 else
