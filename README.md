@@ -6,15 +6,17 @@ Currently, historical data for a URL or origin is only available through BigQuer
 
 ## Prerequisites
 
+Requires `curl` and `jq` (`curl` is preinstalled on most systems).
+
 **Ubuntu / Debian**
 ```sh
 $ sudo apt update
-$ sudo apt install -y jq
+$ sudo apt install -y curl jq
 ```
 
 **MacOS**
 ```
-$ brew install jq
+$ brew install curl jq
 ```
 
 ## Usage
@@ -39,6 +41,14 @@ This will only return data for the origin and disregard the path, (i.e. https://
 ```
 
 
+**Output as a Markdown table**
+```sh
+./crux --format md https://web.dev ${CRUX_API_KEY}
+```
+
+Accepted values are `csv` (default) and `md`.
+
+
 **Save results to file**
 ```sh
 ./crux --output ./results.csv --append https://web.dev ${CRUX_API_KEY}
@@ -50,6 +60,41 @@ This will only return data for the origin and disregard the path, (i.e. https://
 ./crux --output ./results.csv --append https://developers.google.com ${CRUX_API_KEY}
 ./crux --output ./results.csv --append https://developer.mozilla.org ${CRUX_API_KEY}
 ```
+
+For a longer list of URLs, use `--input` (below) instead of invoking the script once per URL.
+
+
+**Run for a list of URLs from a file**
+```sh
+./crux --input ./urls.txt ${CRUX_API_KEY}
+```
+
+`urls.txt` should contain one URL per line, e.g.
+```
+https://developers.google.com
+https://developer.mozilla.org
+```
+
+Note that `<url>` is omitted from the command line in this mode — only the API key is passed. `--input` cannot be combined with `--crawl`.
+
+
+**Crawl a domain**
+```sh
+./crux --crawl https://web.dev ${CRUX_API_KEY}
+```
+
+Discovers URLs for the domain via `sitemap.xml` (following sitemap indexes), falling back to crawling links from the homepage (up to 2 levels deep) if no sitemap is found, and queries CrUX for each discovered URL, up to 1000 URLs. Only same-host `http(s)` URLs are considered, and duplicates are removed. `<url>` must include a scheme and host, e.g. `https://web.dev`. `--crawl` cannot be combined with `--origin` or `--input`.
+
+To avoid exceeding CrUX API rate limits, all requests (including `--crawl` and `--input` runs) are automatically throttled to 150 queries per minute.
+
+
+**Verbose output**
+```sh
+./crux --verbose https://web.dev ${CRUX_API_KEY}
+```
+
+Prints the underlying `curl` requests and progress information to help with debugging.
+
 
 See help for usage instructions.
 ```sh
